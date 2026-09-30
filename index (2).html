@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Winter Arc Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;800&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef3f8;--surface:#fff;--ink:#0f1c2b;--mute:#5b6b7d;--line:#d3dfea;--ice:#2b86c5;--ice0:#e1ebf4;--ember:#e0602a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a121d;--surface:#111e2e;--ink:#e6f0fa;--mute:#8ba0b6;--line:#213448;--ice:#7cc8f5;--ice0:#16283a;--ember:#ff8a4c}}
+:root[data-theme="dark"]{--bg:#0a121d;--surface:#111e2e;--ink:#e6f0fa;--mute:#8ba0b6;--line:#213448;--ice:#7cc8f5;--ice0:#16283a;--ember:#ff8a4c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45}
+main{max-width:960px;margin:0 auto;padding:28px 18px 48px}
+h1{font-size:15px;font-weight:600;margin:0 0 4px;color:var(--mute);letter-spacing:.02em}
+.hero{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.big{font-size:clamp(56px,14vw,112px);font-weight:800;line-height:.95;letter-spacing:-.03em;margin:0}
+.of{font-size:20px;color:var(--mute)}
+.bar{height:6px;background:var(--ice0);border-radius:3px;margin:18px 0 22px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ice);transition:width .4s}
+.stats{display:flex;gap:0;border-block:1px solid var(--line);margin-bottom:28px}
+.stats div{flex:1;padding:14px 0 14px 16px;border-left:1px solid var(--line)}
+.stats div:first-child{border-left:0;padding-left:0}
+.stats b{display:block;font-size:30px;font-weight:800;letter-spacing:-.02em}
+.stats span{font-size:13px;color:var(--mute)}
+.cols{display:grid;gap:32px}
+@media(min-width:780px){.cols{grid-template-columns:1fr 1fr}}
+h2{font-size:20px;margin:0 0 4px}
+.sub{color:var(--mute);font-size:14px;margin:0 0 14px}
+.habit{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.chk{flex:1;display:flex;align-items:center;gap:12px;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+.chk:hover{border-color:var(--ice)}
+.chk:focus-visible,.cell:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
+.box{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;flex:none;font-size:14px;color:transparent}
+.chk[aria-pressed="true"]{background:var(--ice0);border-color:var(--ice)}
+.chk[aria-pressed="true"] .box{background:var(--ice);border-color:var(--ice);color:var(--surface)}
+.chk[aria-pressed="true"] .t{text-decoration:line-through;text-decoration-color:var(--mute);color:var(--mute)}
+.x{border:0;background:none;color:var(--ember);font-size:22px;cursor:pointer;padding:4px 8px}
+.row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+input[type=text],input[type=date]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+input[type=text]{flex:1}
+.btn{font:inherit;font-size:14px;color:var(--ink);background:none;border:1px solid var(--line);border-radius:10px;padding:9px 14px;cursor:pointer}
+.btn.pri{background:var(--ice);border-color:var(--ice);color:var(--surface);font-weight:600}
+.dow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow span{font-size:12px;color:var(--mute);text-align:center;padding-bottom:2px}
+.cell{aspect-ratio:1;border-radius:7px;border:1px solid transparent;font:inherit;font-size:11px;color:var(--ink);cursor:pointer;background:color-mix(in srgb,var(--ice) calc(var(--p)*100%),var(--ice0));padding:0}
+.cell[data-p="1"]{color:var(--surface);font-weight:600}
+.cell.future{opacity:.35;cursor:default}
+.cell.today{border-color:var(--ember);border-width:2px}
+.cell.sel{outline:2px solid var(--ink);outline-offset:1px}
+.pad{visibility:hidden}
+.legend{font-size:12px;color:var(--mute);margin-top:10px}
+footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--mute)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const KEY='winterArc.v1',LEN=92;
+const DEF={start:'2026-10-01',habits:[['h1','Workout'],['h2','Deep work, 2 hours'],['h3','Read 20 pages'],['h4','Drink 3L water'],['h5','Sleep by 11 pm'],['h6','No doomscrolling'],['h7','Journal']].map(([id,name])=>({id,name})),log:{}};
+let S=null;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!Array.isArray(S.habits))S=JSON.parse(JSON.stringify(DEF));
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const pad=n=>String(n).padStart(2,'0');
+const keyOf=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse=k=>{const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const now=new Date(),todayD=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let sel=null,edit=false;
+
+function days(){const s=parse(S.start);return Array.from({length:LEN},(_,i)=>{const d=addDays(s,i);return{i,d,k:keyOf(d)}})}
+const ids=()=>S.habits.map(h=>h.id);
+const doneList=k=>(S.log[k]||[]).filter(id=>ids().includes(id));
+const frac=k=>S.habits.length?doneList(k).length/S.habits.length:0;
+const dayIdx=()=>Math.round((todayD-parse(S.start))/864e5);
+
+function stats(){
+  const D=days(),t=Math.min(dayIdx(),LEN-1);
+  let best=0,run=0,checks=0;
+  for(let i=0;i<=t;i++){const f=frac(D[i].k);checks+=doneList(D[i].k).length;if(f===1){run++;best=Math.max(best,run)}else run=0}
+  let streak=0,i=t;
+  if(t>=0&&frac(D[t].k)<1)i--;
+  while(i>=0&&frac(D[i].k)===1){streak++;i--}
+  const possible=(t+1)*S.habits.length;
+  return{streak,best,pct:t<0||!possible?0:Math.round(checks/possible*100)};
+}
+
+function render(){
+  const D=days(),idx=dayIdx(),st=stats();
+  if(!sel||!D.some(x=>x.k===sel))sel=keyOf(idx<0?D[0].d:idx>=LEN?D[LEN-1].d:todayD);
+  const cur=D.find(x=>x.k===sel);
+  let big,of='';
+  if(idx<0){big=-idx;of=`day${-idx>1?'s':''} until the arc starts`}
+  else if(idx>=LEN){big='Done';of=`${LEN} days finished`}
+  else{big=`Day ${idx+1}`;of=`of ${LEN}`}
+  const elapsed=Math.max(0,Math.min(idx+1,LEN));
+  const lead=(parse(S.start).getDay()+6)%7;
+  const editable=cur.d<=todayD;
+  const fmt=d=>d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+  const dn=doneList(sel).length;
+  document.getElementById('app').innerHTML=`
+  <h1>Winter arc · ${fmt(parse(S.start))} to ${fmt(addDays(parse(S.start),LEN-1))}</h1>
+  <div class="hero"><p class="big">${big}</p><span class="of">${of}</span></div>
+  <div class="bar" role="progressbar" aria-valuenow="${elapsed}" aria-valuemax="${LEN}"><i style="width:${elapsed/LEN*100}%"></i></div>
+  <div class="stats">
+    <div><b>${st.streak}</b><span>day streak</span></div>
+    <div><b>${st.best}</b><span>best streak</span></div>
+    <div><b>${st.pct}%</b><span>habits done</span></div>
+  </div>
+  <div class="cols">
+    <section>
+      <h2>${sel===keyOf(todayD)?'Today':fmt(cur.d)}</h2>
+      <p class="sub">Day ${cur.i+1} · ${dn} of ${S.habits.length} done${editable?'':' · not open yet'}</p>
+      ${S.habits.map(h=>`<div class="habit">
+        <button class="chk" data-h="${h.id}" aria-pressed="${doneList(sel).includes(h.id)}" ${editable?'':'disabled'}><span class="box">✓</span><span class="t">${esc(h.name)}</span></button>
+        ${edit?`<button class="x" data-del="${h.id}" aria-label="Remove ${esc(h.name)}">×</button>`:''}
+      </div>`).join('')||'<p class="sub">No habits yet. Add your first one.</p>'}
+      ${edit?`<div class="row"><input type="text" id="nh" maxlength="40" placeholder="New habit"><button class="btn pri" data-add>Add habit</button></div>`:''}
+      <div class="row"><button class="btn" data-edit>${edit?'Done editing':'Edit habits'}</button></div>
+    </section>
+    <section>
+      <h2>The arc</h2>
+      <p class="sub">Brighter means more habits done. Tap a day to review or fix it.</p>
+      <div class="dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+      <div class="grid">
+        ${Array.from({length:lead},()=>'<span class="pad"></span>').join('')}
+        ${D.map(x=>{const f=frac(x.k),fut=x.d>todayD;return`<button class="cell${fut?' future':''}${x.k===keyOf(todayD)?' today':''}${x.k===sel?' sel':''}" data-k="${x.k}" data-p="${f===1?1:0}" style="--p:${fut?0:f}" ${fut?'disabled':''} aria-label="${fmt(x.d)}, ${Math.round(f*100)}% done">${x.d.getDate()}</button>`}).join('')}
+      </div>
+      <p class="legend">Orange outline is today. A full day needs every habit checked.</p>
+    </section>
+  </div>
+  <footer>
+    <label>Start date <input type="date" id="sd" value="${S.start}"></label>
+    <button class="btn" data-reset>Reset all</button>
+  </footer>`;
+  if(edit){const n=document.getElementById('nh');if(n&&window._focusNew){n.focus();window._focusNew=false}}
+}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.h){const l=S.log[sel]||(S.log[sel]=[]),i=l.indexOf(b.dataset.h);i>=0?l.splice(i,1):l.push(b.dataset.h);save();render();return}
+  if(b.dataset.k){sel=b.dataset.k;render();return}
+  if('edit' in b.dataset){edit=!edit;render();return}
+  if('add' in b.dataset){addHabit();return}
+  if(b.dataset.del){S.habits=S.habits.filter(h=>h.id!==b.dataset.del);save();render();return}
+  if('reset' in b.dataset){
+    if(b.dataset.armed){S=JSON.parse(JSON.stringify(DEF));sel=null;edit=false;save();render()}
+    else{b.dataset.armed=1;b.textContent='Tap again to erase everything';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='Reset all'}},3500)}
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nh')addHabit()});
+document.addEventListener('change',e=>{if(e.target.id==='sd'&&e.target.value){S.start=e.target.value;sel=null;save();render()}});
+function addHabit(){
+  const n=document.getElementById('nh'),v=n.value.trim();if(!v)return;
+  S.habits.push({id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:v});
+  save();window._focusNew=true;render();
+}
+render();
+</script>
+</body>
+</html>
